@@ -3,8 +3,6 @@ import os
 from openai import OpenAI
 from anthropic import Anthropic
 
-# ✅ Load your .env file
-load_dotenv()
 
 # ✅ Set up Streamlit
 st.set_page_config(page_title="Multi-AI Chatbot", page_icon="🤖")
