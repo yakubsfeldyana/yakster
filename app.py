@@ -3,6 +3,9 @@ import os
 from openai import OpenAI
 from anthropic import Anthropic
 
+# ✅ Get API keys from Streamlit secrets
+openai_api_key = st.secrets["OPENAI_API_KEY"]
+anthropic_api_key = st.secrets["ANTHROPIC_API_KEY"]
 
 # ✅ Set up Streamlit
 st.set_page_config(page_title="Multi-AI Chatbot", page_icon="🤖")
@@ -14,7 +17,7 @@ ai_choice = st.selectbox("Choose your AI model:", ["ChatGPT (OpenAI)", "Claude (
 # ✅ Choose personality
 personality = st.selectbox("Pick a personality:", [
     "Helpful Assistant",
-    "Sarcastic Friend",
+    "Sarcastic Friend", 
     "History Tutor",
     "Startup Coach",
     "Therapist",
@@ -64,26 +67,26 @@ if "messages" not in st.session_state or st.session_state.messages[0]["content"]
 if user_input:
     st.chat_message("user").write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
-
+    
     try:
         if ai_choice == "ChatGPT (OpenAI)":
-            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            client = OpenAI(api_key=openai_api_key)
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=st.session_state.messages
             )
             reply = response.choices[0].message.content
         else:
-            client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            client = Anthropic(api_key=anthropic_api_key)
             response = client.messages.create(
                 model="claude-3-opus-20240229",
                 max_tokens=1024,
                 messages=[{"role": "user", "content": user_input}]
             )
             reply = response.content[0].text
-
+            
         st.chat_message("assistant").write(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
-
+        
     except Exception as e:
         st.error(f"❌ Error: {e}")
