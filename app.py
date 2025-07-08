@@ -1,29 +1,28 @@
 import streamlit as st
 import os
+from dotenv import load_dotenv
 from openai import OpenAI
-from anthropic import Anthropic
 
-# ✅ Get API keys from Streamlit secrets
-openai_api_key = st.secrets["OPENAI_API_KEY"]
-anthropic_api_key = st.secrets["ANTHROPIC_API_KEY"]
+# Load API keys from .env
+load_dotenv()
+openai_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=openai_key)
 
-# ✅ Set up Streamlit
-st.set_page_config(page_title="Multi-AI Chatbot", page_icon="🤖")
-st.title("🤖 Your Multi-AI Assistant")
+# Streamlit page setup
+st.set_page_config(page_title="GPT Chatbot", page_icon="🤖")
+st.title("🤖 OpenAI Chatbot")
 
-# ✅ Choose AI model
-ai_choice = st.selectbox("Choose your AI model:", ["ChatGPT (OpenAI)", "Claude (Anthropic)"])
-
-# ✅ Choose personality
+# Choose personality
 personality = st.selectbox("Pick a personality:", [
     "Helpful Assistant",
-    "Sarcastic Friend", 
+    "Sarcastic Friend",
     "History Tutor",
     "Startup Coach",
     "Therapist",
     "Custom..."
 ])
 
+# Set prompt based on personality
 if personality == "Custom...":
     custom_prompt = st.text_area("Describe your custom personality:", height=100)
     if not custom_prompt:
@@ -38,15 +37,22 @@ else:
     }
     custom_prompt = prompts[personality]
 
-# ✅ Choose task
+# Task choice
 task = st.radio("What do you want to do?", ["Ask a question", "Summarize a file"])
 
-# ✅ Handle input
+# Sidebar info
+st.sidebar.markdown(f"🧠 Active personality: **{personality}**")
+
+# Ensure messages start with the selected personality
+if "messages" not in st.session_state or st.session_state.messages[0]["content"] != custom_prompt:
+    st.session_state.messages = [{"role": "system", "content": custom_prompt}]
+
+# Get user input or summarize uploaded file
+user_input = ""
 if task == "Ask a question":
     user_input = st.chat_input("Ask your question...")
 else:
     uploaded_file = st.file_uploader("Upload a file", type=["txt", "md", "pdf"])
-    user_input = ""
     if uploaded_file:
         if uploaded_file.name.endswith(".pdf"):
             from PyPDF2 import PdfReader
@@ -55,38 +61,22 @@ else:
         else:
             file_content = uploaded_file.read().decode("utf-8")
         user_input = f"Please summarize this:\n\n{file_content}"
+    else:
+        st.stop()
 
-# ✅ Always show personality in sidebar
-st.sidebar.markdown(f"🧠 Active personality: **{personality}**")
-
-# ✅ Always reset system prompt if changed
-if "messages" not in st.session_state or st.session_state.messages[0]["content"] != custom_prompt:
-    st.session_state.messages = [{"role": "system", "content": custom_prompt}]
-
-# ✅ When user sends a message or file
+# Process input and show response
 if user_input:
     st.chat_message("user").write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
-    
+
     try:
-        if ai_choice == "ChatGPT (OpenAI)":
-            client = OpenAI(api_key=openai_api_key)
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=st.session_state.messages
-            )
-            reply = response.choices[0].message.content
-        else:
-            client = Anthropic(api_key=anthropic_api_key)
-            response = client.messages.create(
-                model="claude-3-opus-20240229",
-                max_tokens=1024,
-                messages=[{"role": "user", "content": user_input}]
-            )
-            reply = response.content[0].text
-            
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=st.session_state.messages
+        )
+        reply = response.choices[0].message.content
+
         st.chat_message("assistant").write(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
-        
     except Exception as e:
         st.error(f"❌ Error: {e}")
