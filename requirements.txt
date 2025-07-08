@@ -1,3 +1,4 @@
 openai
 streamlit
 anthropic
+PyPDF2
